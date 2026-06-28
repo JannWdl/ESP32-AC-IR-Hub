@@ -3,7 +3,11 @@ param(
     [string]$Password = "",
     [int]$IrPin = 4,
     [int]$RecvPin = 15,
-    [string]$Hostname = "esp32-klima"
+    [string]$Hostname = "esp32-klima",
+    [switch]$DisableOled,
+    [int]$OledSdaPin = 21,
+    [int]$OledSclPin = 22,
+    [string]$OledAddress = "0x3C"
 )
 
 $ErrorActionPreference = "Stop"
@@ -67,6 +71,10 @@ arduino-cli lib update-index
 Write-Host "IRremoteESP8266 installieren..." -ForegroundColor Cyan
 arduino-cli lib install IRremoteESP8266
 
+Write-Host "OLED-Libraries installieren..." -ForegroundColor Cyan
+arduino-cli lib install "Adafruit SSD1306"
+arduino-cli lib install "Adafruit GFX Library"
+
 Write-Host ""
 Write-Host "WLAN-Konfiguration erstellen..." -ForegroundColor Cyan
 
@@ -82,6 +90,7 @@ if ([string]::IsNullOrWhiteSpace($Password)) {
 $EscSsid = Escape-CString $Ssid
 $EscPassword = Escape-CString $Password
 $EscHostname = Escape-CString $Hostname
+$OledEnabled = if ($DisableOled) { 0 } else { 1 }
 
 $ConfigContent = @"
 #pragma once
@@ -97,6 +106,14 @@ $ConfigContent = @"
 #define ENABLE_AP_FALLBACK 1
 #define AP_SSID "ESP32-Klima-Setup"
 #define AP_PASSWORD "12345678"
+
+#define OLED_ENABLED $OledEnabled
+#define OLED_SDA_PIN $OledSdaPin
+#define OLED_SCL_PIN $OledSclPin
+#define OLED_ADDRESS $OledAddress
+#define OLED_WIDTH 128
+#define OLED_HEIGHT 64
+#define OLED_RESET_PIN -1
 "@
 
 $HubConfigPath = Join-Path $Root "firmware\esp32_ac_ir_hub\config.h"
@@ -108,6 +125,12 @@ Write-Host ""
 Write-Host "config.h wurde erstellt:" -ForegroundColor Green
 Write-Host "  $HubConfigPath"
 Write-Host "  $RawConfigPath"
+
+if ($DisableOled) {
+    Write-Host "OLED: deaktiviert" -ForegroundColor Yellow
+} else {
+    Write-Host "OLED: aktiviert, SDA=$OledSdaPin, SCL=$OledSclPin, Adresse=$OledAddress" -ForegroundColor Green
+}
 
 Write-Host ""
 Write-Host "Angeschlossene Boards/Ports:" -ForegroundColor Cyan
