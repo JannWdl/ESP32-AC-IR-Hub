@@ -117,10 +117,16 @@ Write-Host ""
 
 Write-Host "Kompiliere..." -ForegroundColor Cyan
 arduino-cli compile --fqbn $Board "$SketchPath"
+if ($LASTEXITCODE -ne 0) {
+    throw "Kompilierung fehlgeschlagen. Upload wird abgebrochen. Siehe Fehlermeldung oberhalb."
+}
 
 Write-Host ""
 Write-Host "Uploade auf $Port..." -ForegroundColor Cyan
 arduino-cli upload -p $Port --fqbn $Board "$SketchPath"
+if ($LASTEXITCODE -ne 0) {
+    throw "Upload fehlgeschlagen. Prüfe COM-Port, BOOT-Taste und ob der serielle Monitor geschlossen ist."
+}
 
 Write-Host ""
 Write-Host "Flash fertig." -ForegroundColor Green
