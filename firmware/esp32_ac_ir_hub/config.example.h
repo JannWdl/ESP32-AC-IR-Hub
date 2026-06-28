@@ -17,3 +17,13 @@
 #define ENABLE_AP_FALLBACK 1
 #define AP_SSID "ESP32-Klima-Setup"
 #define AP_PASSWORD "12345678"
+
+// Optionales OLED-Display, z. B. 0,96" SSD1306 128x64 I2C.
+// 0 = Display deaktiviert, 1 = Display aktiv.
+#define OLED_ENABLED 1
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 22
+#define OLED_ADDRESS 0x3C
+#define OLED_WIDTH 128
+#define OLED_HEIGHT 64
+#define OLED_RESET_PIN -1
