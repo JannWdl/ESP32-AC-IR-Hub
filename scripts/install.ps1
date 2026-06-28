@@ -5,9 +5,13 @@ param(
     [int]$RecvPin = 15,
     [string]$Hostname = "esp32-klima",
     [switch]$DisableOled,
+    [switch]$DisableDht11,
+    [switch]$DisableMq135,
     [int]$OledSdaPin = 21,
     [int]$OledSclPin = 22,
-    [string]$OledAddress = "0x3C"
+    [string]$OledAddress = "0x3C",
+    [int]$DhtPin = 26,
+    [int]$Mq135Pin = 34
 )
 
 $ErrorActionPreference = "Stop"
@@ -75,6 +79,10 @@ Write-Host "OLED-Libraries installieren..." -ForegroundColor Cyan
 arduino-cli lib install "Adafruit SSD1306"
 arduino-cli lib install "Adafruit GFX Library"
 
+Write-Host "DHT-Libraries installieren..." -ForegroundColor Cyan
+arduino-cli lib install "DHT sensor library"
+arduino-cli lib install "Adafruit Unified Sensor"
+
 Write-Host ""
 Write-Host "WLAN-Konfiguration erstellen..." -ForegroundColor Cyan
 
@@ -91,6 +99,8 @@ $EscSsid = Escape-CString $Ssid
 $EscPassword = Escape-CString $Password
 $EscHostname = Escape-CString $Hostname
 $OledEnabled = if ($DisableOled) { 0 } else { 1 }
+$DhtEnabled = if ($DisableDht11) { 0 } else { 1 }
+$Mq135Enabled = if ($DisableMq135) { 0 } else { 1 }
 
 $ConfigContent = @"
 #pragma once
@@ -114,6 +124,19 @@ $ConfigContent = @"
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 #define OLED_RESET_PIN -1
+
+#define DHT_ENABLED $DhtEnabled
+#define DHT_PIN $DhtPin
+#define DHT_TYPE DHT11
+
+#define MQ135_ENABLED $Mq135Enabled
+#define MQ135_PIN $Mq135Pin
+#define MQ135_ADC_REF_VOLTAGE 3.3f
+#define MQ135_GOOD_MAX_ADC 1200
+#define MQ135_OK_MAX_ADC 2200
+#define MQ135_HIGH_MAX_ADC 3200
+
+#define SENSOR_READ_INTERVAL_MS 5000UL
 "@
 
 $HubConfigPath = Join-Path $Root "firmware\esp32_ac_ir_hub\config.h"
@@ -125,12 +148,9 @@ Write-Host ""
 Write-Host "config.h wurde erstellt:" -ForegroundColor Green
 Write-Host "  $HubConfigPath"
 Write-Host "  $RawConfigPath"
-
-if ($DisableOled) {
-    Write-Host "OLED: deaktiviert" -ForegroundColor Yellow
-} else {
-    Write-Host "OLED: aktiviert, SDA=$OledSdaPin, SCL=$OledSclPin, Adresse=$OledAddress" -ForegroundColor Green
-}
+Write-Host "OLED : $(if ($DisableOled) { 'deaktiviert' } else { "aktiviert, SDA=$OledSdaPin, SCL=$OledSclPin, Adresse=$OledAddress" })"
+Write-Host "DHT11: $(if ($DisableDht11) { 'deaktiviert' } else { "aktiviert, GPIO=$DhtPin" })"
+Write-Host "MQ135: $(if ($DisableMq135) { 'deaktiviert' } else { "aktiviert, ADC GPIO=$Mq135Pin" })"
 
 Write-Host ""
 Write-Host "Angeschlossene Boards/Ports:" -ForegroundColor Cyan
