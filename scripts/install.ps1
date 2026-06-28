@@ -132,9 +132,6 @@ $ConfigContent = @"
 #define MQ135_ENABLED $Mq135Enabled
 #define MQ135_PIN $Mq135Pin
 #define MQ135_ADC_REF_VOLTAGE 3.3f
-#define MQ135_GOOD_MAX_ADC 1200
-#define MQ135_OK_MAX_ADC 2200
-#define MQ135_HIGH_MAX_ADC 3200
 
 #define SENSOR_READ_INTERVAL_MS 5000UL
 "@
