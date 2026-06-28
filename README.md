@@ -9,8 +9,9 @@ Der aktuelle Stand ist auf deine Anlage ausgelegt:
 - erkanntes Protokoll: `MITSUBISHI_HEAVY_152`
 - IR-Sender: `KY-005`
 - IR-Empfänger: `KY-022`
+- optionales OLED-Display: SSD1306 I2C 128x64
 - Webinterface + JSON-API
-- Original-Fernbedienung wird mitgehört, damit die Weboberfläche den Zustand aktualisieren kann
+- Original-Fernbedienung wird mitgehört, damit Weboberfläche und OLED den Zustand aktualisieren können
 
 > Wichtig: IR ist normalerweise Einbahnstraße. Der ESP32 weiß sicher, was er selbst gesendet hat und was der KY-022 gesehen hat. Er weiß nicht garantiert, ob die Klimaanlage den Befehl wirklich empfangen hat.
 
@@ -18,6 +19,7 @@ Der aktuelle Stand ist auf deine Anlage ausgelegt:
 
 - Weboberfläche auf dem ESP32
 - Statusanzeige: Power, Temperatur, Modus, Lüfter, Quelle der letzten Änderung
+- OLED-Anzeige direkt am Gerät
 - API für Home Assistant / eigene Automationen
 - IR-Sync: Original-Fernbedienung mithören
 - letzter Zustand wird im ESP32-Speicher gesichert
@@ -43,7 +45,21 @@ KY-022 +  -> ESP32 3V3
 KY-022 -  -> ESP32 GND
 ```
 
-Mehr dazu: [`docs/wiring.md`](docs/wiring.md)
+### OLED SSD1306 I2C, optional
+
+```text
+OLED VCC -> ESP32 3V3
+OLED GND -> ESP32 GND
+OLED SDA -> ESP32 GPIO 21
+OLED SCL -> ESP32 GPIO 22
+```
+
+Standardadresse: `0x3C`.
+
+Mehr dazu:
+
+- [`docs/wiring.md`](docs/wiring.md)
+- [`docs/oled-display.md`](docs/oled-display.md)
 
 ## Schnellstart unter Windows
 
@@ -54,6 +70,25 @@ Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\scripts\install.ps1
 .\scripts\flash.ps1 COM7
 .\scripts\monitor.ps1 COM7
+```
+
+Das Installationsskript installiert jetzt auch die OLED-Libraries:
+
+```powershell
+arduino-cli lib install "Adafruit SSD1306"
+arduino-cli lib install "Adafruit GFX Library"
+```
+
+OLED deaktivieren:
+
+```powershell
+.\scripts\install.ps1 -DisableOled
+```
+
+OLED mit anderer Adresse:
+
+```powershell
+.\scripts\install.ps1 -OledAddress 0x3D
 ```
 
 Im seriellen Monitor steht danach die IP-Adresse:
@@ -78,12 +113,13 @@ http://esp32-klima.local
 
 ```text
 firmware/
-  esp32_ac_ir_hub/       Hauptfirmware: Webinterface + Mitsubishi-Heavy-152 + IR-Sync
+  esp32_ac_ir_hub/       Hauptfirmware: Webinterface + OLED + Mitsubishi-Heavy-152 + IR-Sync
   ir_reader/             Fernbedienungen auslesen
   raw_replay_example/    Universal-Fallback: aufgezeichnete Raw-Codes senden
 
 docs/
   wiring.md
+  oled-display.md
   supported-ac-protocols.md
   home-assistant.md
   github-setup.md
@@ -122,21 +158,20 @@ Beispiel:
 /api/set?power=1&mode=cool&temp=25&fan=auto
 ```
 
+Der Status enthält zusätzlich:
+
+```json
+{
+  "oledEnabled": true,
+  "oledReady": true
+}
+```
+
 ## Unterstützte Klimaanlagen
 
 Das Projekt nutzt **IRremoteESP8266** als zentrale IR-Library. Die Library unterstützt ESP8266/ESP32 und viele A/C-Protokolle. Für unbekannte Geräte gibt es zusätzlich den Raw-Copy-Fallback.
 
 Siehe: [`docs/supported-ac-protocols.md`](docs/supported-ac-protocols.md)
-
-## GitHub-Upload
-
-Wenn dieses Paket lokal entpackt ist und du auf GitHub ein leeres Repo angelegt hast:
-
-```powershell
-.\scripts\publish_to_github.ps1 -RepoUrl "https://github.com/JannWdl/ESP32-AC-IR-Hub.git"
-```
-
-Mehr dazu: [`docs/github-setup.md`](docs/github-setup.md)
 
 ## Aktueller gelernter Zustand
 
@@ -159,4 +194,4 @@ uint8_t state[19] = {
 ## Lizenz
 
 MIT für dieses Projekt.  
-Achtung: Die eingebundene IRremoteESP8266-Library hat eine eigene Lizenz. Diese wird nicht in dieses Repo kopiert, sondern per Arduino CLI / PlatformIO installiert.
+Achtung: Die eingebundene IRremoteESP8266-Library und die Adafruit-Libraries haben eigene Lizenzen. Diese werden nicht in dieses Repo kopiert, sondern per Arduino CLI / PlatformIO installiert.
