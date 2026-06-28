@@ -53,18 +53,6 @@
 #define MQ135_ADC_REF_VOLTAGE 3.3f
 #endif
 
-#ifndef MQ135_GOOD_MAX_ADC
-#define MQ135_GOOD_MAX_ADC 1200
-#endif
-
-#ifndef MQ135_OK_MAX_ADC
-#define MQ135_OK_MAX_ADC 2200
-#endif
-
-#ifndef MQ135_HIGH_MAX_ADC
-#define MQ135_HIGH_MAX_ADC 3200
-#endif
-
 #ifndef SENSOR_READ_INTERVAL_MS
 #define SENSOR_READ_INTERVAL_MS 5000UL
 #endif
@@ -232,18 +220,6 @@ uint8_t fanFromId(String fan) {
   return ac.getFan();
 }
 
-String mq135QualityText() {
-#if MQ135_ENABLED
-  if (mq135Raw < 0) return "unbekannt";
-  if (mq135Raw < MQ135_GOOD_MAX_ADC) return "gut";
-  if (mq135Raw < MQ135_OK_MAX_ADC) return "mittel";
-  if (mq135Raw < MQ135_HIGH_MAX_ADC) return "hoch";
-  return "sehr hoch";
-#else
-  return "deaktiviert";
-#endif
-}
-
 String rawStateHex() {
   uint8_t* raw = ac.getRaw();
   String out = "";
@@ -296,8 +272,7 @@ String sensorsJson() {
   json += "\"enabled\":" + String(MQ135_ENABLED ? "true" : "false") + ",";
   json += "\"pin\":" + String(MQ135_PIN) + ",";
   json += "\"raw\":" + jsonIntOrNull(mq135Raw) + ",";
-  json += "\"voltage\":" + jsonFloat(mq135Voltage, 3) + ",";
-  json += "\"quality\":\"" + jsonEscape(mq135QualityText()) + "\"";
+  json += "\"voltage\":" + jsonFloat(mq135Voltage, 3);
   json += "}";
   json += "}";
   return json;
@@ -543,14 +518,14 @@ void handleRoot() {
   html += "</head><body><div class='box'>";
   html += "<h1>ESP32 Klima Sync</h1><div class='sub'>Mitsubishi Heavy 152 · Webinterface + Fernbedienung mithören · OLED + Sensoren</div>";
   html += "<div class='status'><div id='power'>Status: ...</div><div class='temp'><span id='temp'>--</span>°C</div><div><span id='mode'>...</span> · Lüfter <span id='fan'>...</span></div><div style='margin-top:10px;color:#aeb3c2'>Letzte Änderung: <span id='source'>...</span></div><div style='color:#aeb3c2'>Alter: <span id='age'>...</span></div><div style='color:#aeb3c2'>OLED: <span id='oled'>...</span></div></div>";
-  html += "<div class='sensor'><b>Raum & Luftqualität</b><div class='sgrid'><div class='sbox'><div class='label'>DHT11 Temperatur</div><div class='value' id='roomTemp'>...</div></div><div class='sbox'><div class='label'>DHT11 Feuchte</div><div class='value' id='roomHum'>...</div></div><div class='sbox'><div class='label'>MQ-135 Luft</div><div class='value' id='mq135'>...</div><div class='label' id='mq135v'></div></div></div></div>";
+  html += "<div class='sensor'><b>Raum & Sensoren</b><div class='sgrid'><div class='sbox'><div class='label'>DHT11 Temperatur</div><div class='value' id='roomTemp'>...</div></div><div class='sbox'><div class='label'>DHT11 Feuchte</div><div class='value' id='roomHum'>...</div></div><div class='sbox'><div class='label'>MQ-135 Rohwert</div><div class='value' id='mq135'>...</div><div class='label' id='mq135v'></div></div></div></div>";
   html += "<div class='grid'><button class='on' onclick=\"setAc('power=1')\">AN</button><button class='off' onclick=\"setAc('power=0')\">AUS</button></div>";
   html += "<div class='grid'><button class='small' onclick='tempDown()'>- 1 °C</button><button class='small' onclick='tempUp()'>+ 1 °C</button></div>";
   html += "<div class='grid3'><button class='small' onclick=\"setAc('mode=cool')\">Kühlen</button><button class='small' onclick=\"setAc('mode=heat')\">Heizen</button><button class='small' onclick=\"setAc('mode=dry')\">Entfeuchten</button></div>";
   html += "<div class='grid3'><button class='small' onclick=\"setAc('fan=auto')\">Fan Auto</button><button class='small' onclick=\"setAc('fan=low')\">Fan Low</button><button class='small' onclick=\"setAc('fan=high')\">Fan High</button></div>";
   html += "<button class='ok' onclick='sendAgain()'>Aktuellen Zustand erneut senden</button>";
-  html += "<div class='hint'>API: <code>/api/status</code> · <code>/api/set?power=1&temp=25&mode=cool&fan=auto</code><br>MQ-135 ist ein Rohwert/Trend, kein kalibrierter ppm-Messwert. Der Sensor braucht Aufwärmzeit.</div>";
-  html += "</div><script>let state={temp:25};function fmt(v,s){return v===null||v===undefined?'--':(Number(v).toFixed(1)+s)}async function refresh(){try{const r=await fetch('/api/status',{cache:'no-store'});state=await r.json();document.getElementById('power').textContent='Status: '+(state.power?'AN':'AUS')+(state.hasValidState?'':' (noch unbekannt)');document.getElementById('temp').textContent=state.temp;document.getElementById('mode').textContent=state.modeText;document.getElementById('fan').textContent=state.fanText;document.getElementById('source').textContent=state.source;document.getElementById('age').textContent=Math.round((state.ageMs||0)/1000)+' s';document.getElementById('oled').textContent=state.oledEnabled?(state.oledReady?'aktiv':'aktiviert, nicht gefunden'):'deaktiviert';const d=state.sensors.dht11;document.getElementById('roomTemp').textContent=d.enabled?fmt(d.temperatureC,' °C'):'deaktiviert';document.getElementById('roomHum').textContent=d.enabled?fmt(d.humidityPercent,' %'):'deaktiviert';const m=state.sensors.mq135;document.getElementById('mq135').textContent=m.enabled?((m.raw===null?'--':m.raw)+' · '+m.quality):'deaktiviert';document.getElementById('mq135v').textContent=m.enabled?((m.voltage===null?'--':Number(m.voltage).toFixed(3))+' V'):' ';}catch(e){console.log(e)}}async function setAc(q){await fetch('/api/set?'+q,{cache:'no-store'});await refresh();}async function sendAgain(){await fetch('/api/send',{cache:'no-store'});await refresh();}function tempUp(){let t=(state.temp||25)+1;if(t>31)t=31;setAc('temp='+t);}function tempDown(){let t=(state.temp||25)-1;if(t<17)t=17;setAc('temp='+t);}refresh();setInterval(refresh,1000);</script></body></html>";
+  html += "<div class='hint'>API: <code>/api/status</code> · <code>/api/set?power=1&temp=25&mode=cool&fan=auto</code><br>MQ-135 wird aktuell nur als Rohwert und Spannung angezeigt.</div>";
+  html += "</div><script>let state={temp:25};function fmt(v,s){return v===null||v===undefined?'--':(Number(v).toFixed(1)+s)}async function refresh(){try{const r=await fetch('/api/status',{cache:'no-store'});state=await r.json();document.getElementById('power').textContent='Status: '+(state.power?'AN':'AUS')+(state.hasValidState?'':' (noch unbekannt)');document.getElementById('temp').textContent=state.temp;document.getElementById('mode').textContent=state.modeText;document.getElementById('fan').textContent=state.fanText;document.getElementById('source').textContent=state.source;document.getElementById('age').textContent=Math.round((state.ageMs||0)/1000)+' s';document.getElementById('oled').textContent=state.oledEnabled?(state.oledReady?'aktiv':'aktiviert, nicht gefunden'):'deaktiviert';const d=state.sensors.dht11;document.getElementById('roomTemp').textContent=d.enabled?fmt(d.temperatureC,' °C'):'deaktiviert';document.getElementById('roomHum').textContent=d.enabled?fmt(d.humidityPercent,' %'):'deaktiviert';const m=state.sensors.mq135;document.getElementById('mq135').textContent=m.enabled?(m.raw===null?'--':m.raw):'deaktiviert';document.getElementById('mq135v').textContent=m.enabled?((m.voltage===null?'--':Number(m.voltage).toFixed(3))+' V'):' ';}catch(e){console.log(e)}}async function setAc(q){await fetch('/api/set?'+q,{cache:'no-store'});await refresh();}async function sendAgain(){await fetch('/api/send',{cache:'no-store'});await refresh();}function tempUp(){let t=(state.temp||25)+1;if(t>31)t=31;setAc('temp='+t);}function tempDown(){let t=(state.temp||25)-1;if(t<17)t=17;setAc('temp='+t);}refresh();setInterval(refresh,1000);</script></body></html>";
   server.send(200, "text/html", html);
 }
 
