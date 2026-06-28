@@ -6,6 +6,7 @@
 #include <math.h>
 
 #include <IRremoteESP8266.h>
+#include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
 #include <ir_MitsubishiHeavy.h>
@@ -106,6 +107,7 @@ WebServer server(80);
 Preferences prefs;
 
 IRMitsubishiHeavy152Ac ac(IR_LED_PIN);
+IRsend rawIrsend(IR_LED_PIN);
 IRrecv irrecv(IR_RECV_PIN, CAPTURE_BUFFER_SIZE, IR_TIMEOUT, true);
 decode_results results;
 
@@ -447,13 +449,14 @@ void markState(String source) {
 void sendCurrentState(String reason) {
   ignoreIrUntilMs = millis() + 1500;
   Serial.println();
-  Serial.println("========== IR SEND ==========");
+  Serial.println("========== IR RAW SEND ==========");
   Serial.println("Quelle: " + reason);
   Serial.println(ac.toString());
-  ac.send();
+  Serial.println("Raw: " + rawStateHex());
+  rawIrsend.sendMitsubishiHeavy152(ac.getRaw(), kMitsubishiHeavy152StateLength);
   markState(reason);
-  Serial.println("Gesendet.");
-  Serial.println("=============================");
+  Serial.println("Raw-State gesendet.");
+  Serial.println("=================================");
 }
 
 void handleIrReceiver() {
@@ -524,7 +527,7 @@ void handleRoot() {
   html += "<div class='grid3'><button class='small' onclick=\"setAc('mode=cool')\">Kühlen</button><button class='small' onclick=\"setAc('mode=heat')\">Heizen</button><button class='small' onclick=\"setAc('mode=dry')\">Entfeuchten</button></div>";
   html += "<div class='grid3'><button class='small' onclick=\"setAc('fan=auto')\">Fan Auto</button><button class='small' onclick=\"setAc('fan=low')\">Fan Low</button><button class='small' onclick=\"setAc('fan=high')\">Fan High</button></div>";
   html += "<button class='ok' onclick='sendAgain()'>Aktuellen Zustand erneut senden</button>";
-  html += "<div class='hint'>API: <code>/api/status</code> · <code>/api/set?power=1&temp=25&mode=cool&fan=auto</code><br>MQ-135 wird aktuell nur als Rohwert und Spannung angezeigt.</div>";
+  html += "<div class='hint'>API: <code>/api/status</code> · <code>/api/set?power=1&temp=25&mode=cool&fan=auto</code><br>Gesendet wird der aktuelle 19-Byte-MHI152-Raw-State.</div>";
   html += "</div><script>let state={temp:25};function fmt(v,s){return v===null||v===undefined?'--':(Number(v).toFixed(1)+s)}async function refresh(){try{const r=await fetch('/api/status',{cache:'no-store'});state=await r.json();document.getElementById('power').textContent='Status: '+(state.power?'AN':'AUS')+(state.hasValidState?'':' (noch unbekannt)');document.getElementById('temp').textContent=state.temp;document.getElementById('mode').textContent=state.modeText;document.getElementById('fan').textContent=state.fanText;document.getElementById('source').textContent=state.source;document.getElementById('age').textContent=Math.round((state.ageMs||0)/1000)+' s';document.getElementById('oled').textContent=state.oledEnabled?(state.oledReady?'aktiv':'aktiviert, nicht gefunden'):'deaktiviert';const d=state.sensors.dht11;document.getElementById('roomTemp').textContent=d.enabled?fmt(d.temperatureC,' °C'):'deaktiviert';document.getElementById('roomHum').textContent=d.enabled?fmt(d.humidityPercent,' %'):'deaktiviert';const m=state.sensors.mq135;document.getElementById('mq135').textContent=m.enabled?(m.raw===null?'--':m.raw):'deaktiviert';document.getElementById('mq135v').textContent=m.enabled?((m.voltage===null?'--':Number(m.voltage).toFixed(3))+' V'):' ';}catch(e){console.log(e)}}async function setAc(q){await fetch('/api/set?'+q,{cache:'no-store'});await refresh();}async function sendAgain(){await fetch('/api/send',{cache:'no-store'});await refresh();}function tempUp(){let t=(state.temp||25)+1;if(t>31)t=31;setAc('temp='+t);}function tempDown(){let t=(state.temp||25)-1;if(t<17)t=17;setAc('temp='+t);}refresh();setInterval(refresh,1000);</script></body></html>";
   server.send(200, "text/html", html);
 }
@@ -588,6 +591,7 @@ void setup() {
 #endif
 
   ac.begin();
+  rawIrsend.begin();
   ac.stateReset();
   if (!loadState()) {
     ac.setRaw(MHI152_ON_25C);
