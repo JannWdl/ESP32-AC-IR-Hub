@@ -17,21 +17,20 @@ GPIO 26
 
 Anzeige:
 
-- Webinterface: Karte `Raum & Luftqualität`
+- Webinterface: Karte `Raum & Sensoren`
 - API: `sensors.dht11.temperatureC` und `sensors.dht11.humidityPercent`
 - OLED: `R:23C 45%`
 
 ## MQ-135
 
-Der MQ-135 wird als Luftqualitätsindikator eingebunden.
+Der MQ-135 wird erstmal nur als einfacher Analog-Sensor eingebunden.
 
-Die Firmware zeigt bewusst keine angeblich exakten ppm-Werte an. Ohne Kalibrierung, bekannten Lastwiderstand, Temperatur-/Feuchtekompensation und Einbrennzeit wären ppm-Werte irreführend.
+Die Firmware zeigt bewusst keine ppm-Werte und keine Qualitätsbewertung an. Ohne Kalibrierung, bekannten Lastwiderstand, Temperatur-/Feuchtekompensation und Einbrennzeit wären solche Werte irreführend.
 
-Stattdessen werden angezeigt:
+Angezeigt werden nur:
 
 - ADC-Rohwert 0 bis 4095
 - Spannung am ADC
-- grobe Bewertung: gut, mittel, hoch, sehr hoch
 
 Standardpin:
 
@@ -48,8 +47,7 @@ API:
       "enabled": true,
       "pin": 34,
       "raw": 1234,
-      "voltage": 0.994,
-      "quality": "mittel"
+      "voltage": 0.994
     }
   }
 }
@@ -57,7 +55,7 @@ API:
 
 ## Flash-Skript
 
-Beim Flashen fragt `scripts/flash.ps1` jetzt ab:
+Beim Flashen fragt `scripts/flash.ps1` ab:
 
 ```text
 OLED Display angeschlossen? [J/n]
@@ -92,5 +90,5 @@ In `firmware/esp32_ac_ir_hub/config.h`:
 
 - DHT11 ist langsam und wird nur alle 5 Sekunden abgefragt.
 - MQ-135 braucht Aufwärmzeit.
-- MQ-135-Werte sind Trends, keine kalibrierten Messwerte.
+- MQ-135-Werte sind Rohwerte/Trends, keine kalibrierten Messwerte.
 - GPIO34 ist nur Eingang und daher sehr gut für den analogen MQ-135-Wert geeignet.
