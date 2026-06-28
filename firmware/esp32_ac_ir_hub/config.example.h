@@ -27,3 +27,22 @@
 #define OLED_WIDTH 128
 #define OLED_HEIGHT 64
 #define OLED_RESET_PIN -1
+
+// Optionaler DHT11 Raumtemperatur-/Luftfeuchtigkeitssensor.
+#define DHT_ENABLED 1
+#define DHT_PIN 26
+#define DHT_TYPE DHT11
+
+// Optionaler MQ-135 Luftqualitätssensor.
+// MQ135_PIN muss ein ADC-fähiger ESP32-Pin sein. GPIO34 ist Input-only und ideal.
+#define MQ135_ENABLED 1
+#define MQ135_PIN 34
+#define MQ135_ADC_REF_VOLTAGE 3.3f
+
+// Grobe Rohwert-Schwellen für die Web-/OLED-Anzeige.
+// Nicht als kalibrierter ppm-Wert verstehen.
+#define MQ135_GOOD_MAX_ADC 1200
+#define MQ135_OK_MAX_ADC 2200
+#define MQ135_HIGH_MAX_ADC 3200
+
+#define SENSOR_READ_INTERVAL_MS 5000UL
