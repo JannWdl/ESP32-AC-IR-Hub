@@ -131,7 +131,7 @@ String jsonEscape(String input) {
 
 String jsonFloat(float value, uint8_t decimals = 1) {
   if (isnan(value)) return "null";
-  return String(value, decimals);
+  return String(value, (unsigned int)decimals);
 }
 
 String jsonIntOrNull(int value) {
